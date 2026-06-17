@@ -1,0 +1,17 @@
+{
+  "name": "invoices-functions",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Root configuration to delegate Firebase emulator and helper scripts",
+  "scripts": {
+    "dev": "firebase emulators:start --project=icy-invoices --import=./exported-dev-data --export-on-exit=./exported-dev-data",
+    "pro": "firebase emulators:start --project=icy-invoices --import=./exported-pro-data --export-on-exit=./exported-pro-data",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log",
+    "kill": "npx kill-port 8080",
+    "email": "mailpit",
+    "install:all": "npm install --prefix functions"
+  }
+}

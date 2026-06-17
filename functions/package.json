@@ -1,0 +1,23 @@
+{
+  "name": "functions",
+  "type": "module",
+  "engines": {
+    "node": "24"
+  },
+  "main": "index.js",
+  "description": "Cloud Functions for Firebase",
+  "scripts": {
+    "dev": "firebase emulators:start --project=icy-invoices --import=../exported-dev-data --export-on-exit=./exported-dev-data",
+    "pro": "firebase emulators:start --project=icy-invoices --import=../exported-pro-data --export-on-exit=./exported-pro-data",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log",
+    "kill": "npx kill-port 8080"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.10.0",
+    "firebase-functions": "^7.2.5"
+  },
+  "private": true
+}

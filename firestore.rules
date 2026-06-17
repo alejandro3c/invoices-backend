@@ -1,0 +1,55 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner() {
+      return isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    function createsOwnedDocument() {
+      return isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    function keepsSameOwner() {
+      return isOwner() && request.resource.data.userId == resource.data.userId;
+    }
+
+    function createsDraftInvoice() {
+      return createsOwnedDocument()
+        && request.resource.data.status == "draft"
+        && request.resource.data.number == null
+        && request.resource.data.sequenceNumber == null
+        && request.resource.data.year == null
+        && request.resource.data.issuedAt == null;
+    }
+
+    function keepsInvoiceIssueFields() {
+      return request.resource.data.status == resource.data.status
+        && request.resource.data.number == resource.data.number
+        && request.resource.data.sequenceNumber == resource.data.sequenceNumber
+        && request.resource.data.year == resource.data.year
+        && request.resource.data.issuedAt == resource.data.issuedAt;
+    }
+
+    match /clients/{clientId} {
+      allow read, delete: if isOwner();
+      allow create: if createsOwnedDocument();
+      allow update: if keepsSameOwner();
+    }
+
+    match /invoices/{invoiceId} {
+      allow read, delete: if isOwner();
+      allow create: if createsDraftInvoice();
+      allow update: if keepsSameOwner() && keepsInvoiceIssueFields();
+    }
+
+    match /userSettings/{userId} {
+      allow read, create, update, delete: if isSignedIn()
+        && request.auth.uid == userId;
+    }
+  }
+}
