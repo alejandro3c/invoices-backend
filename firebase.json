@@ -34,6 +34,6 @@
     "rules": "firestore.rules"
   },
   "storage": {
-    "rules": "storage.rules.emulator"
+    "rules": "storage.rules"
   }
 }

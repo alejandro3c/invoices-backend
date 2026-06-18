@@ -13,6 +13,7 @@ ui-debug.log*
 
 # Firebase cache and config
 .firebase/
+exported-*/
 
 # Local env files
 .env
