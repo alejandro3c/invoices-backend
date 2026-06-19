@@ -49,6 +49,12 @@ service cloud.firestore {
       allow update: if keepsSameOwner() && keepsInvoiceIssueFields();
     }
 
+    match /recurringInvoices/{recurringInvoiceId} {
+      allow read, delete: if isOwner();
+      allow create: if createsOwnedDocument();
+      allow update: if keepsSameOwner();
+    }
+
     match /userSettings/{userId} {
       allow read, create, update, delete: if isSignedIn()
         && request.auth.uid == userId;
