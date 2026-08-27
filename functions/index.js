@@ -1,7 +1,9 @@
 import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
 import { setGlobalOptions } from "firebase-functions/v2";
 import * as logger from "firebase-functions/logger";
-import admin from "firebase-admin";
+import { initializeApp } from "firebase-admin/app";
+import { FieldValue, Timestamp, getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 import {
   getInvoicePdfStoragePath,
   renderInvoiceHtml,
@@ -11,10 +13,10 @@ import {
 // Set global options for all functions (default region)
 setGlobalOptions({ region: "europe-west3" });
 
-admin.initializeApp();
+initializeApp();
 
-const db = admin.firestore();
-const bucket = admin.storage().bucket();
+const db = getFirestore();
+const bucket = getStorage().bucket();
 
 const pdfFunctionOptions = {
   concurrency: 2,
@@ -68,16 +70,16 @@ function parseDate(value, fieldName) {
     const date = new Date(value);
 
     if (!Number.isNaN(date.getTime())) {
-      return admin.firestore.Timestamp.fromDate(date);
+      return Timestamp.fromDate(date);
     }
   }
 
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return admin.firestore.Timestamp.fromDate(value);
+    return Timestamp.fromDate(value);
   }
 
   if (typeof value === "object" && typeof value.seconds === "number") {
-    return new admin.firestore.Timestamp(
+    return new Timestamp(
       value.seconds,
       value.nanoseconds ?? 0,
     );
@@ -172,7 +174,7 @@ function buildInvoiceUpdatePayload({ client, values }) {
       total: roundCurrency(totals.total),
       withholdingTotal: roundCurrency(totals.withholdingTotal),
     },
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
     withholdingRate,
   };
 }
@@ -214,14 +216,14 @@ async function generateAndStoreInvoicePdf({ invoiceId, userId }) {
   });
 
   const pdf = {
-    generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    generatedAt: FieldValue.serverTimestamp(),
     storagePath,
     version,
   };
 
   await invoiceRef.update({
     pdf,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
   });
 
   return {
@@ -314,7 +316,7 @@ export const issueInvoice = onCall(pdfFunctionOptions, async (request) => {
         userId,
         year,
         nextSequenceNumber: sequenceNumber + 1,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true },
     );
@@ -323,8 +325,8 @@ export const issueInvoice = onCall(pdfFunctionOptions, async (request) => {
       number,
       sequenceNumber,
       year,
-      issuedAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      issuedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     return {
@@ -339,6 +341,39 @@ export const issueInvoice = onCall(pdfFunctionOptions, async (request) => {
 
   return {
     ...issuedInvoice,
+    pdf,
+  };
+});
+
+export const generateInvoicePdf = onCall(pdfFunctionOptions, async (request) => {
+  const userId = request.auth?.uid;
+  const invoiceId = request.data?.invoiceId;
+
+  if (!userId) {
+    throw new HttpsError(
+      "unauthenticated",
+      "Debes iniciar sesión para generar el PDF.",
+    );
+  }
+
+  if (typeof invoiceId !== "string" || invoiceId.trim() === "") {
+    throw new HttpsError(
+      "invalid-argument",
+      "El identificador de factura es obligatorio.",
+    );
+  }
+
+  const pdf = await generateAndStoreInvoicePdf({ invoiceId, userId });
+
+  if (!pdf) {
+    throw new HttpsError(
+      "failed-precondition",
+      "No se puede generar el PDF de una factura en borrador.",
+    );
+  }
+
+  return {
+    invoiceId,
     pdf,
   };
 });
