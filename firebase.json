@@ -14,19 +14,33 @@
   ],
   "emulators": {
     "functions": {
-      "port": 5001
+      "port": 4442
     },
     "firestore": {
-      "port": 8080
+      "port": 4443,
+      "websocketPort": 4447
     },
     "auth": {
-      "port": 9099
+      "port": 4441
     },
     "storage": {
-      "port": 9199
+      "port": 4444
+    },
+    "hub": {
+      "port": 4445
+    },
+    "logging": {
+      "port": 4446
+    },
+    "eventarc": {
+      "port": 4448
+    },
+    "tasks": {
+      "port": 4449
     },
     "ui": {
-      "enabled": true
+      "enabled": true,
+      "port": 4440
     },
     "singleProjectMode": true
   },

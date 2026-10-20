@@ -13,7 +13,7 @@
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
-    "kill": "npx kill-port 8080"
+    "kill": "npx kill-port 4443"
   },
   "dependencies": {
     "firebase-admin": "^14.3.0",
