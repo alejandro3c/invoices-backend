@@ -4,12 +4,15 @@
   "engines": {
     "node": "24"
   },
-  "main": "index.js",
+  "main": "lib/index.js",
   "description": "Cloud Functions for Firebase",
   "scripts": {
-    "dev": "firebase emulators:start --project=icy-invoices --import=../exported-dev-data --export-on-exit=./exported-dev-data",
-    "pro": "firebase emulators:start --project=icy-invoices --import=../exported-pro-data --export-on-exit=./exported-pro-data",
-    "shell": "firebase functions:shell",
+    "build": "tsc -p tsconfig.build.json",
+    "build:watch": "tsc -p tsconfig.build.json --watch",
+    "typecheck": "tsc -p tsconfig.json",
+    "dev": "npm run build && firebase emulators:start --project=icy-invoices --import=../exported-dev-data --export-on-exit=./exported-dev-data",
+    "pro": "npm run build && firebase emulators:start --project=icy-invoices --import=../exported-pro-data --export-on-exit=./exported-pro-data",
+    "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
@@ -20,5 +23,9 @@
     "firebase-functions": "^7.3.2",
     "puppeteer": "^25.9.0"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2"
+  }
 }

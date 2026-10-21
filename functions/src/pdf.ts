@@ -1,4 +1,22 @@
+import type { Timestamp } from "firebase-admin/firestore";
 import puppeteer from "puppeteer";
+import type {
+  BillingAddress,
+  InvoiceDocument,
+  InvoiceLine,
+} from "./invoices/types.ts";
+
+export type InvoicePdfInput = Pick<
+  InvoiceDocument,
+  | "clientSnapshot"
+  | "dueDate"
+  | "issueDate"
+  | "lines"
+  | "number"
+  | "paymentTerms"
+  | "publicNotes"
+  | "totals"
+>;
 
 const currencyFormatter = new Intl.NumberFormat("es-ES", {
   currency: "EUR",
@@ -7,11 +25,11 @@ const currencyFormatter = new Intl.NumberFormat("es-ES", {
 
 const dateFormatter = new Intl.DateTimeFormat("es-ES");
 
-function formatCurrency(value) {
+function formatCurrency(value: number | undefined) {
   return currencyFormatter.format(value ?? 0);
 }
 
-function formatDate(value) {
+function formatDate(value: Timestamp | null | undefined) {
   if (!value?.toDate) {
     return "—";
   }
@@ -19,7 +37,7 @@ function formatDate(value) {
   return dateFormatter.format(value.toDate());
 }
 
-function escapeHtml(value) {
+function escapeHtml(value: unknown) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -28,7 +46,7 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function getLineTotal(line) {
+function getLineTotal(line: InvoiceLine) {
   const base = line.unitPrice * line.quantity;
   const discount = base * (line.discountRate / 100);
   const taxableBase = base - discount;
@@ -37,11 +55,11 @@ function getLineTotal(line) {
   return taxableBase + tax;
 }
 
-function formatSignedWithholding(value) {
+function formatSignedWithholding(value: number) {
   return value > 0 ? `-${formatCurrency(value)}` : formatCurrency(0);
 }
 
-function renderAddress(address) {
+function renderAddress(address: BillingAddress | undefined) {
   return [
     address?.addressLine,
     [address?.postalCode, address?.city].filter(Boolean).join(" "),
@@ -53,14 +71,22 @@ function renderAddress(address) {
     .join("");
 }
 
-export function getInvoicePdfStoragePath({ invoiceId, userId, version }) {
+export function getInvoicePdfStoragePath({
+  invoiceId,
+  userId,
+  version,
+}: {
+  invoiceId: string;
+  userId: string;
+  version: number;
+}) {
   return `users/${userId}/invoices/${invoiceId}/invoice-v${version}.pdf`;
 }
 
-export function renderInvoiceHtml({ invoice }) {
+export function renderInvoiceHtml({ invoice }: { invoice: InvoicePdfInput }) {
   const client = invoice.clientSnapshot;
   const lines = invoice.lines ?? [];
-  const totals = invoice.totals ?? {};
+  const totals: Partial<InvoiceDocument["totals"]> = invoice.totals ?? {};
 
   return `<!doctype html>
 <html lang="es">
@@ -249,7 +275,7 @@ export function renderInvoiceHtml({ invoice }) {
       <div class="total-row"><span>Base</span><strong>${formatCurrency(totals.subtotal)}</strong></div>
       <div class="total-row"><span>Descuento</span><strong>${formatCurrency(totals.discountTotal)}</strong></div>
       <div class="total-row"><span>IVA</span><strong>${formatCurrency(totals.taxTotal)}</strong></div>
-      <div class="total-row"><span>Retención</span><strong>${formatSignedWithholding(totals.withholdingTotal)}</strong></div>
+      <div class="total-row"><span>Retención</span><strong>${formatSignedWithholding(totals.withholdingTotal ?? 0)}</strong></div>
       <div class="total-row final"><span>Total</span><span>${formatCurrency(totals.total)}</span></div>
     </section>
 
@@ -269,7 +295,11 @@ export function renderInvoiceHtml({ invoice }) {
 </html>`;
 }
 
-export async function renderInvoicePdfBuffer({ invoice }) {
+export async function renderInvoicePdfBuffer({
+  invoice,
+}: {
+  invoice: InvoicePdfInput;
+}) {
   const browser = await puppeteer.launch({
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });

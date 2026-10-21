@@ -23,3 +23,6 @@ exported-*/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Compiled functions
+functions/lib/
