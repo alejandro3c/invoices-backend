@@ -10,12 +10,12 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
-    // Imports use .ts extensions and only syntax Node can strip, so the sources can also run
-    // directly with Node; tsc rewrites the extensions when it builds
+    // Node runs the dev scripts straight from the .ts sources, so imports use .ts extensions
+    // and only syntax Node can strip is allowed; tsc rewrites the extensions when it builds
     "rewriteRelativeImportExtensions": true,
     "erasableSyntaxOnly": true,
     "verbatimModuleSyntax": true,
     "noEmit": true
   },
-  "include": ["src"]
+  "include": ["src", "dev"]
 }
