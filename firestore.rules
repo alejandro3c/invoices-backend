@@ -25,7 +25,9 @@ service cloud.firestore {
         && request.resource.data.sequenceNumber == null
         && request.resource.data.year == null
         && request.resource.data.issuedAt == null
-        && request.resource.data.pdf == null;
+        // A missing field can't be read in rules: get() turns "not sent" into null
+        && request.resource.data.get("pdf", null) == null
+        && request.resource.data.get("payment", null) == null;
     }
 
     function keepsInvoiceIssueFields() {
@@ -34,7 +36,29 @@ service cloud.firestore {
         && request.resource.data.sequenceNumber == resource.data.sequenceNumber
         && request.resource.data.year == resource.data.year
         && request.resource.data.issuedAt == resource.data.issuedAt
-        && request.resource.data.pdf == resource.data.pdf;
+        && request.resource.data.get("pdf", null) == resource.data.get("pdf", null)
+        && request.resource.data.get("payment", null) == resource.data.get("payment", null);
+    }
+
+    // Registering a payment: an issued invoice becomes paid on a day between its issue date and today,
+    // and nothing else changes
+    function registersPayment() {
+      let paidOn = request.resource.data.payment.paidOn;
+      return resource.data.status == "issued"
+        && request.resource.data.status == "paid"
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "payment", "updatedAt"])
+        && request.resource.data.payment.keys().hasOnly(["paidOn"])
+        && paidOn is timestamp
+        && paidOn >= resource.data.issueDate
+        && paidOn <= request.time;
+    }
+
+    // Undoing it: a paid invoice goes back to issued and loses its payment, nothing else changes
+    function undoesPayment() {
+      return resource.data.status == "paid"
+        && request.resource.data.status == "issued"
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "payment", "updatedAt"])
+        && !("payment" in request.resource.data);
     }
 
     match /clients/{clientId} {
@@ -46,7 +70,8 @@ service cloud.firestore {
     match /invoices/{invoiceId} {
       allow read, delete: if isOwner();
       allow create: if createsDraftInvoice();
-      allow update: if keepsSameOwner() && keepsInvoiceIssueFields();
+      allow update: if keepsSameOwner()
+        && (keepsInvoiceIssueFields() || registersPayment() || undoesPayment());
     }
 
     match /recurringInvoices/{recurringInvoiceId} {
