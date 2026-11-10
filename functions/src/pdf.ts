@@ -14,7 +14,6 @@ export type InvoicePdfInput = Pick<
   | "lines"
   | "number"
   | "paymentTerms"
-  | "publicNotes"
   | "totals"
 >;
 
@@ -283,11 +282,6 @@ export function renderInvoiceHtml({ invoice }: { invoice: InvoicePdfInput }) {
       ${
         invoice.paymentTerms
           ? `<div class="box"><h2>Forma de pago</h2>${escapeHtml(invoice.paymentTerms)}</div>`
-          : ""
-      }
-      ${
-        invoice.publicNotes
-          ? `<div class="box"><h2>Notas</h2>${escapeHtml(invoice.publicNotes)}</div>`
           : ""
       }
     </section>

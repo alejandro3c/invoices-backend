@@ -64,8 +64,9 @@ export type InvoiceDocument = {
   withholdingRate: number;
   lines: InvoiceLine[];
   paymentTerms?: string;
-  publicNotes?: string;
   totals: InvoiceTotals;
   pdf?: InvoicePdf | null;
+  /** Only on paid invoices: the day the money came in. The web writes it, under the Firestore rules. */
+  payment?: { paidOn: Timestamp };
   issuedAt: Timestamp | null;
 };

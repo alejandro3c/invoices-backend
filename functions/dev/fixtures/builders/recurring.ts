@@ -21,7 +21,6 @@ export type FixtureRecurringSpec = {
   withholdingRate?: number;
   lines: FixtureLine[];
   paymentTerms?: string;
-  publicNotes?: string;
 };
 
 const MONTHS_BY_FREQUENCY: Record<RecurringFrequency, number> = {
@@ -80,7 +79,6 @@ export async function applyRecurringInvoices(
           taxRate: line.taxRate ?? 21,
         })),
         paymentTerms: spec.paymentTerms ?? "",
-        publicNotes: spec.publicNotes ?? "",
         withholdingRate: spec.withholdingRate ?? 0,
       },
       behavior: { autoIssue: false, createAs: "draft" },

@@ -45,7 +45,7 @@ const invoices = [
     dueDate: "2025-10-01",
     withholdingRate: 15,
     lines: [{ description: "Mantenimiento web — septiembre", unitPrice: 150 }],
-    publicNotes: "Anulada: el cliente canceló el servicio.",
+    // Cancelled: the client called off the service
   }),
   buildInvoice({
     id: "2025-0004",
@@ -84,7 +84,7 @@ const invoices = [
     withholdingRate: 15,
     lines: [{ description: "Auditoría de accesibilidad", unitPrice: 1750 }],
     paymentTerms: TRANSFER_30,
-    publicNotes: "Vencida: sirve para probar facturas pendientes de cobro.",
+    // Overdue: to try invoices still waiting for payment
   }),
   buildInvoice({
     id: "2026-0003",

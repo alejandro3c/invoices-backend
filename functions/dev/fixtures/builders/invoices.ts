@@ -39,7 +39,6 @@ export type FixtureInvoiceSpec = {
   withholdingRate?: number;
   lines: FixtureLine[];
   paymentTerms?: string;
-  publicNotes?: string;
 };
 
 export type FixtureInvoice = {
@@ -91,9 +90,12 @@ export function buildInvoice(spec: FixtureInvoiceSpec): FixtureInvoice {
       withholdingRate,
       lines,
       paymentTerms: spec.paymentTerms ?? "",
-      publicNotes: spec.publicNotes ?? "",
       totals: calculateInvoiceTotals({ lines, withholdingRate }),
       issuedAt: isDraft ? null : issueDate,
+      // A paid invoice was paid on its due date, or on its issue date when it has none
+      ...(spec.status === "paid"
+        ? { payment: { paidOn: spec.dueDate ? timestamp(spec.dueDate) : issueDate } }
+        : {}),
       ...(isDraft
         ? {}
         : {

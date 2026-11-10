@@ -45,7 +45,7 @@ const recurringInvoices: FixtureRecurringSpec[] = [
     dayOfMonth: 31,
     dueDays: 0,
     lines: [{ description: "Renovación de dominio y hosting", unitPrice: 120 }],
-    publicNotes: "Pausada hasta que la clienta confirme la renovación.",
+    // Paused until the client confirms the renewal
   },
 ];
 

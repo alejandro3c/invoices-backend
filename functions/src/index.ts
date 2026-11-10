@@ -2,7 +2,13 @@ import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
 import { setGlobalOptions } from "firebase-functions/v2";
 import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
-import { FieldValue, Timestamp, getFirestore } from "firebase-admin/firestore";
+import {
+  FieldValue,
+  Timestamp,
+  getFirestore,
+  type DocumentReference,
+  type DocumentSnapshot,
+} from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import {
   formatInvoiceNumber,
@@ -48,7 +54,6 @@ type InvoiceValuesInput = {
   issueDate?: unknown;
   lines?: unknown;
   paymentTerms?: unknown;
-  publicNotes?: unknown;
   withholdingRate?: unknown;
 };
 
@@ -155,10 +160,41 @@ function buildInvoiceUpdatePayload({
     issueDate,
     lines,
     paymentTerms: optionalText(values.paymentTerms),
-    publicNotes: optionalText(values.publicNotes),
     totals: calculateInvoiceTotals({ lines, withholdingRate }),
     updatedAt: FieldValue.serverTimestamp(),
     withholdingRate,
+  };
+}
+
+/**
+ * The number the next invoice issued in `year` gets, from the user's numbering settings and the year's
+ * counter. `get` reads a document: inside a transaction when issuing, so the number is taken safely, or
+ * plainly when only previewing it.
+ */
+async function readNextInvoiceNumber({
+  get,
+  userId,
+  year,
+}: {
+  get: (ref: DocumentReference) => Promise<DocumentSnapshot>;
+  userId: string;
+  year: number;
+}) {
+  const settingsRef = db.collection("userSettings").doc(userId);
+  const counterRef = db
+    .collection("invoiceCounters")
+    .doc(getInvoiceCounterId(userId, year));
+  const settingsSnapshot = await get(settingsRef);
+  const counterSnapshot = await get(counterRef);
+  const settings = (settingsSnapshot.data() as UserSettingsDocument | undefined)
+    ?.invoiceNumbering;
+  const counter = counterSnapshot.data() as InvoiceCounterDocument | undefined;
+  const sequenceNumber = counter?.nextSequenceNumber ?? 1;
+
+  return {
+    counterRef,
+    number: formatInvoiceNumber({ sequenceNumber, settings, year }),
+    sequenceNumber,
   };
 }
 
@@ -291,19 +327,9 @@ export const issueInvoice = onCall<InvoiceRequest>(
       }
 
       const year = invoice.issueDate.toDate().getFullYear();
-      const settingsRef = db.collection("userSettings").doc(userId);
-      const counterRef = db
-        .collection("invoiceCounters")
-        .doc(getInvoiceCounterId(userId, year));
-      const settingsSnapshot = await transaction.get(settingsRef);
-      const counterSnapshot = await transaction.get(counterRef);
-      const settings = (settingsSnapshot.data() as UserSettingsDocument | undefined)
-        ?.invoiceNumbering;
-      const counter = counterSnapshot.data() as InvoiceCounterDocument | undefined;
-      const sequenceNumber = counter?.nextSequenceNumber ?? 1;
-      const number = formatInvoiceNumber({
-        sequenceNumber,
-        settings,
+      const { counterRef, number, sequenceNumber } = await readNextInvoiceNumber({
+        get: (ref) => transaction.get(ref),
+        userId,
         year,
       });
 
@@ -340,6 +366,41 @@ export const issueInvoice = onCall<InvoiceRequest>(
       ...issuedInvoice,
       pdf,
     };
+  },
+);
+
+type NextInvoiceNumberRequest = {
+  issueDate?: unknown;
+};
+
+/**
+ * The number a draft would get if it were issued now with this issue date, without taking it: the editor
+ * shows it before issuing. Issuing reads the counter again, so the number shown is only a preview.
+ */
+export const getNextInvoiceNumber = onCall<NextInvoiceNumberRequest>(
+  async (request) => {
+    const userId = request.auth?.uid;
+
+    if (!userId) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Debes iniciar sesión para consultar la numeración.",
+      );
+    }
+
+    const issueDate = parseDate(request.data?.issueDate, "La fecha");
+
+    if (!issueDate) {
+      throw new HttpsError("invalid-argument", "La fecha es obligatoria.");
+    }
+
+    const { number } = await readNextInvoiceNumber({
+      get: (ref) => ref.get(),
+      userId,
+      year: issueDate.toDate().getFullYear(),
+    });
+
+    return { number };
   },
 );
 
