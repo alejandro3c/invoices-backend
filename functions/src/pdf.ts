@@ -17,12 +17,19 @@ export type InvoicePdfInput = Pick<
   | "totals"
 >;
 
+// Spanish formatting skips the thousands separator in 4-digit amounts ("2010,49 €"); "always" keeps it.
+// Same formats as the web, so the PDF and the screen read the same.
 const currencyFormatter = new Intl.NumberFormat("es-ES", {
   currency: "EUR",
   style: "currency",
+  useGrouping: "always",
 });
 
-const dateFormatter = new Intl.DateTimeFormat("es-ES");
+const dateFormatter = new Intl.DateTimeFormat("es-ES", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
 
 function formatCurrency(value: number | undefined) {
   return currencyFormatter.format(value ?? 0);
